@@ -1,3 +1,9 @@
 .vscode/
+.venv/
+__pycache__
 t.md
 s.md
+server
+*.log
+*.csv
+*.html
