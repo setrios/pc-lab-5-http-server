@@ -1,13 +1,42 @@
 #include <iostream>
 #include <cstring>
+#include <string>
+#include <sstream>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 #define PORT 8080
+#define BUFFER_SIZE 4096
+
+std::string parseRequestPath(const std::string& request) {
+    std::istringstream stream(request);
+    std::string method, path, version;
+    
+    stream >> method >> path >> version;
+    
+    // log parsed request
+    std::cout << "Method: " << method << ", Path: " << path << ", Version: " << version << std::endl;
+    
+    return path;
+}
 
 void handleClient(int clientSocket) {
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    
+    // read http request
+    int bytesRead = recv(clientSocket, buffer, BUFFER_SIZE - 1, 0);
+    if (bytesRead <= 0) {
+        close(clientSocket);
+        return;
+    }
+    
+    std::string request(buffer);
+    std::string path = parseRequestPath(request);
+    
+    // placeholder response
     const char* response = "HTTP/1.1 200 OK\r\n\r\nHello from server";
     send(clientSocket, response, strlen(response), 0);
     close(clientSocket);
