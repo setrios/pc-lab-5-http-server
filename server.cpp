@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <thread>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -147,7 +148,9 @@ int main() {
 
         std::cout << "Connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << std::endl;
 
-        handleClient(clientSocket);
+        // create new thread for each client
+        std::thread clientThread(handleClient, clientSocket);
+        clientThread.detach();
     }
 
     close(serverSocket);
