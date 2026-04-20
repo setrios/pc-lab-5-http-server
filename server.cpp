@@ -50,6 +50,26 @@ bool readFile(const std::string& filePath, std::string& content) {
     return true;
 }
 
+std::string buildHttpResponse(int statusCode, const std::string& content) {
+    std::string response;
+
+    // status line
+    if (statusCode == 200)
+        response = "HTTP/1.1 200 OK\r\n";
+    else if (statusCode == 404)
+        response = "HTTP/1.1 404 Not Found\r\n";
+
+    // headers
+    response += "Content-Type: text/html\r\n";
+    response += "Content-Length: " + std::to_string(content.length()) + "\r\n";
+    response += "\r\n";
+
+    // body
+    response += content;
+
+    return response;
+}
+
 void handleClient(int clientSocket) {
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
@@ -71,14 +91,14 @@ void handleClient(int clientSocket) {
     // try to read file
     if (readFile(filePath, content)) {
         std::cout << "File found: " << filePath << std::endl;
-        // placeholder response - will add proper http response in next step
-        const char* response = "HTTP/1.1 200 OK\r\n\r\nFile content loaded";
-        send(clientSocket, response, strlen(response), 0);
+        std::string response = buildHttpResponse(200, content);
+        send(clientSocket, response.c_str(), response.length(), 0);
     }
     else {
         std::cout << "File not found: " << filePath << std::endl;
-        const char* response = "HTTP/1.1 404 Not Found\r\n\r\nFile not found";
-        send(clientSocket, response, strlen(response), 0);
+        std::string notFoundContent = "<html><body><h1>404 Not Found</h1></body></html>";
+        std::string response = buildHttpResponse(404, notFoundContent);
+        send(clientSocket, response.c_str(), response.length(), 0);
     }
 
     close(clientSocket);
