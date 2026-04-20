@@ -2,6 +2,7 @@
 #include <cstring>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -9,36 +10,77 @@
 
 #define PORT 8080
 #define BUFFER_SIZE 4096
+#define WWW_DIR "www"
 
 std::string parseRequestPath(const std::string& request) {
     std::istringstream stream(request);
     std::string method, path, version;
-    
+
     stream >> method >> path >> version;
-    
+
     // log parsed request
     std::cout << "Method: " << method << ", Path: " << path << ", Version: " << version << std::endl;
-    
+
     return path;
+}
+
+std::string mapPathToFile(const std::string& path) {
+    std::string filePath = WWW_DIR;
+
+    // root path maps to index.html
+    if (path == "/")
+        filePath += "/index.html";
+    else
+        filePath += path;
+
+    return filePath;
+}
+
+bool readFile(const std::string& filePath, std::string& content) {
+    std::ifstream file(filePath);
+
+    if (!file.is_open())
+        return false;
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    content = buffer.str();
+    file.close();
+
+    return true;
 }
 
 void handleClient(int clientSocket) {
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
-    
+
     // read http request
     int bytesRead = recv(clientSocket, buffer, BUFFER_SIZE - 1, 0);
     if (bytesRead <= 0) {
         close(clientSocket);
         return;
     }
-    
+
     std::string request(buffer);
     std::string path = parseRequestPath(request);
-    
-    // placeholder response
-    const char* response = "HTTP/1.1 200 OK\r\n\r\nHello from server";
-    send(clientSocket, response, strlen(response), 0);
+
+    // map url path to file
+    std::string filePath = mapPathToFile(path);
+    std::string content;
+
+    // try to read file
+    if (readFile(filePath, content)) {
+        std::cout << "File found: " << filePath << std::endl;
+        // placeholder response - will add proper http response in next step
+        const char* response = "HTTP/1.1 200 OK\r\n\r\nFile content loaded";
+        send(clientSocket, response, strlen(response), 0);
+    }
+    else {
+        std::cout << "File not found: " << filePath << std::endl;
+        const char* response = "HTTP/1.1 404 Not Found\r\n\r\nFile not found";
+        send(clientSocket, response, strlen(response), 0);
+    }
+
     close(clientSocket);
 }
 
